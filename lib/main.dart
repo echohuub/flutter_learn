@@ -1,66 +1,67 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-void main() {
-  runApp(MaterialApp(
-      title: 'Passing Data',
-      home: TodosScreen(
-        todos: List<Todo>.generate(
-            20,
-            (i) => Todo('Todo $i',
-                'A description of what needs to be done for Todo $i')),
-      )));
-}
-
-class Todo {
-  final String title;
-  final String descriptoiin;
-  Todo(this.title, this.descriptoiin);
-}
-
-class TodosScreen extends StatelessWidget {
-  final List<Todo> todos;
-
-  TodosScreen({Key key, @required this.todos}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Todos'),
-      ),
-      body: ListView.builder(
-        itemCount: todos.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(todos[index].title),
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DetailScreen(todo: todos[index]),
-                  ));
-            },
-          );
-        },
-      ),
-    );
+Future<Post> fetchPost() async {
+  final response =
+      await http.get('https://jsonplaceholder.typicode.com/posts/1');
+  if (response.statusCode == 200) {
+    return Post.fromJson(json.decode(response.body));
+  } else {
+    throw Exception('Failed to load post');
   }
 }
 
-class DetailScreen extends StatelessWidget {
-  final Todo todo;
+class Post {
+  final int userId;
+  final int id;
+  final String title;
+  final String body;
 
-  DetailScreen({Key key, @required this.todo}) : super(key: key);
+  Post({this.userId, this.id, this.title, this.body});
+
+  factory Post.fromJson(Map<String, dynamic> json) {
+    return Post(
+        userId: json['userId'],
+        id: json['id'],
+        title: json['title'],
+        body: json['body']);
+  }
+}
+
+void main() => runApp(MyApp(post: fetchPost()));
+
+class MyApp extends StatelessWidget {
+  final Future<Post> post;
+
+  MyApp({Key key, this.post}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(todo.title),
+    return MaterialApp(
+      title: 'Fetch Data Example',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text(todo.descriptoiin),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Fetch Data Example'),
+        ),
+        body: Center(
+          child: FutureBuilder<Post>(
+            future: post,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return Text(snapshot.data.title);
+              } else if (snapshot.hasError) {
+                return Text('${snapshot.error}');
+              }
+              return CircularProgressIndicator();
+            },
+          ),
+        ),
       ),
     );
   }
